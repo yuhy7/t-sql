@@ -1,0 +1,288 @@
+CREATE FUNCTION [dbo].[MiniCover](@in varchar(255))
+
+RETURNS char(255)
+
+AS
+BEGIN
+  declare @FD TABLE(fd char(20))
+  declare @H TABLE(fd char(20))
+  declare @J TABLE(fd char(20))
+  
+  declare @i int
+  declare @k int
+  declare @l int
+  declare @m int
+  declare @len int
+  declare @fd1 char(20)
+  declare @fd2 char(20)
+  declare @hx char(255)
+  declare @jx char(255)
+  declare @XA char(20)
+  declare @YA char(20)
+  declare @X char(20)
+  declare @Y char(20)
+  declare @Z char(20)
+  declare @W char(20)
+  declare @A char(1)
+  declare @B char(1)
+  declare @jchar char(255)
+  declare @hchar char(255)
+  declare @result char(255)
+  
+  set @result=''
+  
+  insert into @FD
+  select * from divideFD(@in)
+  
+  declare fdset cursor scroll
+  for select * from @FD
+  
+  declare hset cursor scroll
+  for select * from @H
+  
+  declare hset0 cursor scroll
+  for select * from @H
+  
+  declare jset cursor scroll
+  for select * from @J
+  
+ --STEP1 
+ 
+  open fdset
+  set @k=@@CURSOR_ROWS
+  while(@k>0)
+  begin
+    fetch from fdset into @fd1
+    set @i=(select CHARINDEX('→',@fd1))
+    set @X=LEFT(@fd1,@i-1)
+    set @Y=SUBSTRING(@fd1,@i+1,LEN(@fd1))
+    set @len=LEN(@Y)
+    set @l=1
+    while(@len>0)
+    begin
+      set @A=SUBSTRING(@Y,@l,@l)
+      set @XA=STUFF(@X,LEN(@X)+1,1,'→')
+      set @XA=STUFF(@XA,LEN(@XA)+1,1,@A)
+      insert into @H(fd)
+      values(@XA)
+      set @len=@len-1
+      set @l=@l+1
+    end
+    set @k=@k-1
+  end
+  close fdset
+  
+ --STEP2 
+ 
+  open hset
+  set @m=@@CURSOR_ROWS
+  while(@m>1)
+  begin
+	fetch from hset into @fd1
+	set @i=(select CHARINDEX('→',@fd1))
+    set @X=LEFT(@fd1,@i-1)
+    set @A=SUBSTRING(@fd1,@i+1,@i+1)
+    insert into @J
+    select * from @H
+    delete from @J
+    where fd=@fd1
+    set @jchar=''
+	open jset
+	set @k=@@CURSOR_ROWS
+	while(@k>1)
+	begin
+		fetch from jset into @fd2
+		set @jchar=STUFF(@jchar,LEN(@jchar)+1,LEN(@fd2),@fd2)
+		set @jchar=STUFF(@jchar,LEN(@jchar)+1,1,',')
+		set @k=@k-1
+	end
+	fetch from jset into @fd2
+	set @jchar=STUFF(@jchar,LEN(@jchar)+1,LEN(@fd2),@fd2)
+	close jset
+	set @jx=dbo.AttrClos(@X,@jchar)
+	set @i=(select CHARINDEX('包',@jx))
+	set @jx=SUBSTRING(@jx,@i+2,LEN(@jx))
+	if(select dbo.stricom(@A,@jx))='true'
+		delete from @H
+		where fd=@fd1
+	set @m=@m-1
+	delete from @J
+  end
+  close hset
+  
+  --STEP3
+  
+  open hset
+  set @k=@@CURSOR_ROWS
+  while(@k>1)
+  begin
+    fetch from hset into @fd1
+    set @result=STUFF(@result,LEN(@result)+1,LEN(@fd1),@fd1)
+    set @result=STUFF(@result,LEN(@result)+1,1,',')
+    set @k=@k-1
+  end
+  fetch from hset into @fd1
+  set @result=STUFF(@result,LEN(@result)+1,LEN(@fd1),@fd1)
+  close hset
+  
+  open hset
+  set @m=@@CURSOR_ROWS
+  while(@m>1)
+  begin
+	fetch from hset into @fd1
+xh:	set @i=(select CHARINDEX('→',@fd1))
+    set @X=LEFT(@fd1,@i-1)
+    set @A=SUBSTRING(@fd1,@i+1,@i+1)
+    if(LEN(@X)>1)
+    begin
+		set @len=LEN(@X)
+		while(@len>0)
+		begin
+			set @B=SUBSTRING(@X,@len,@len)
+			set @Y=REPLACE(@X,@B,'')
+			delete from @J
+			insert into @J
+			select * from @H
+			delete from @J
+			where fd=@fd1
+			set @YA=STUFF(@Y,LEN(@Y)+1,1,'→')
+			set @YA=STUFF(@YA,LEN(@YA)+1,1,@A)
+			insert into @J(fd)
+			values(@YA)
+			set @jchar=''
+			set @hchar=''
+			open jset
+			set @k=@@CURSOR_ROWS
+			while(@k>1)
+			begin
+				fetch from jset into @fd2
+				set @jchar=STUFF(@jchar,LEN(@jchar)+1,LEN(@fd2),@fd2)
+				set @jchar=STUFF(@jchar,LEN(@jchar)+1,1,',')
+				set @k=@k-1
+			end
+			fetch from jset into @fd2
+			set @jchar=STUFF(@jchar,LEN(@jchar)+1,LEN(@fd2),@fd2)
+			close jset
+			open hset0
+			set @k=@@CURSOR_ROWS
+			while(@k>1)
+			begin
+				fetch from hset0 into @fd2
+				set @hchar=STUFF(@hchar,LEN(@hchar)+1,LEN(@fd2),@fd2)
+				set @hchar=STUFF(@hchar,LEN(@hchar)+1,1,',')
+				set @k=@k-1
+			end
+			fetch from hset0 into @fd2
+			set @hchar=STUFF(@hchar,LEN(@hchar)+1,LEN(@fd2),@fd2)
+			close hset0
+			set @jx=dbo.AttrClos(@Y,@jchar)
+			set @i=(select CHARINDEX('包',@jx))
+			set @jx=SUBSTRING(@jx,@i+2,LEN(@jx))
+			set @hx=dbo.AttrClos(@Y,@hchar)
+			set @i=(select CHARINDEX('包',@hx))
+			set @hx=SUBSTRING(@hx,@i+2,LEN(@hx))
+			if((select dbo.stricom(@hx,@jx))='true' and (select dbo.stricom(@jx,@hx))='true')
+			begin
+				update @H
+				set fd=@YA
+				where fd=@fd1
+				set @fd1=@YA
+				goto xh
+			end
+			set @len=@len-1
+		end
+	end
+	set @m=@m-1
+  end
+  close hset
+
+  open hset
+  set @m=@@CURSOR_ROWS
+  while(@m>1)
+  begin
+	fetch from hset into @fd1
+	set @i=(select CHARINDEX('→',@fd1))
+    set @X=LEFT(@fd1,@i-1)
+    set @A=SUBSTRING(@fd1,@i+1,@i+1)
+    insert into @J
+    select * from @H
+    delete from @J
+    where fd=@fd1
+    set @jchar=''
+	open jset
+	set @k=@@CURSOR_ROWS
+	while(@k>1)
+	begin
+		fetch from jset into @fd2
+		set @jchar=STUFF(@jchar,LEN(@jchar)+1,LEN(@fd2),@fd2)
+		set @jchar=STUFF(@jchar,LEN(@jchar)+1,1,',')
+		set @k=@k-1
+	end
+	fetch from jset into @fd2
+	set @jchar=STUFF(@jchar,LEN(@jchar)+1,LEN(@fd2),@fd2)
+	close jset
+	set @jx=dbo.AttrClos(@X,@jchar)
+	set @i=(select CHARINDEX('包',@jx))
+	set @jx=SUBSTRING(@jx,@i+2,LEN(@jx))
+	if(select dbo.stricom(@A,@jx))='true'
+		delete from @H
+		where fd=@fd1
+	set @m=@m-1
+	delete from @J
+  end
+  close hset
+  
+  --STEP4
+  
+  open hset
+  set @m=@@CURSOR_ROWS
+  while(@m>0)
+  begin
+	fetch from hset into @fd1
+	set @i=(select CHARINDEX('→',@fd1))
+    set @X=LEFT(@fd1,@i-1)
+    set @Z=SUBSTRING(@fd1,@i+1,LEN(@fd1))
+    open hset0
+	set @k=@@CURSOR_ROWS
+	while(@k>0)
+	begin
+		fetch from hset0 into @fd2
+		set @i=(select CHARINDEX('→',@fd2))
+		set @Y=LEFT(@fd2,@i-1)
+		set @W=SUBSTRING(@fd2,@i+1,LEN(@fd2))
+		if((select dbo.stricom(@X,@Y))='true' and (select dbo.stricom(@Y,@X))='true' and (select dbo.stricom(@Z,@W))<>'true')
+		begin
+			set @XA=STUFF(@fd1,LEN(@fd1)+1,LEN(@W),@W)
+			update @H
+			set fd=@XA
+			where fd=@fd1
+			delete from @H
+			where fd=@fd2
+			set @fd1=@XA
+		end
+		set @k=@k-1
+	end
+	close hset0
+    set @m=@m-1
+  end
+  close hset
+  
+  set @result=''
+  open hset
+  set @k=@@CURSOR_ROWS
+  while(@k>1)
+  begin
+    fetch from hset into @fd1
+    set @result=STUFF(@result,LEN(@result)+1,LEN(@fd1),@fd1)
+    set @result=STUFF(@result,LEN(@result)+1,1,',')
+    set @k=@k-1
+  end
+  fetch from hset into @fd1
+  set @result=STUFF(@result,LEN(@result)+1,LEN(@fd1),@fd1)
+  close hset
+
+set @result='最小覆盖为：'+@result
+
+RETURN @result
+
+END
