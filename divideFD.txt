@@ -1,0 +1,40 @@
+CREATE FUNCTION divideFD(@in varchar(255))
+
+RETURNS @SaveFD TABLE(fd char(20))
+
+AS
+BEGIN
+  declare @str varchar(255)
+  declare @x varchar(20)
+  declare @a varchar(1)
+  declare @i int
+  declare @len int
+  declare @len1 int
+
+  set @str=@in
+  set @i=0
+  set @len=LEN(@str)
+  set @len1=LEN(@str)
+
+  while @len>0
+     begin
+         set @i=@i+1
+         set @a=SUBSTRING(@str,@i,@i)
+         if @a=','
+            begin
+              set @x=SUBSTRING(@str,1,@i-1)
+              insert into @SaveFD
+              values(@x)
+              set @str=SUBSTRING(@str,@i+1,@len1)
+              set @i=0
+              set @len1=LEN(@str)
+            end
+         set @len=@len-1
+     end
+
+  set @x=SUBSTRING(@str,1,@len1)
+  insert into @SaveFD
+  values(@x)
+
+RETURN
+END
