@@ -1,0 +1,109 @@
+CREATE FUNCTION AttrClos 
+(   --属性集attr相对于函数依赖集in的属性闭包
+@attr varchar(30),@in varchar(255)
+)
+
+RETURNS varchar(255)  --返回结果，输出属性集和属性集的闭包
+
+AS
+BEGIN
+  declare @X TABLE(attr char(1))
+  declare @X1 TABLE(attr char(30),lv int)
+  declare @FD TABLE(fd char(20))
+  
+  declare @i int
+  declare @j int
+  declare @k int
+  declare @len int
+  declare @a char(30)
+  declare @b char(1)
+  declare @fd1 char(20)
+  declare @z char(20)
+  declare @w char(20)
+  declare @text varchar(255)
+
+  set @a=@attr
+  set @i=0
+  set @len=LEN(@attr)
+  
+  insert into @FD
+  select * from divideFD(@in)
+  
+  while(@len>0)
+    begin
+      insert into @X
+      values(LEFT(@a,1))
+      set @a=SUBSTRING(@a,2,@len)
+      set @len=@len-1
+    end
+  
+  declare xset cursor scroll
+  for select distinct attr from @X order by attr asc
+  open xset
+  set @k=@@CURSOR_ROWS
+  while @k>0
+    begin
+      fetch from xset into @b
+      set @a=stuff(@a,LEN(@a)+1,1,@b)
+      set @k=@k-1
+    end
+  close xset
+  
+  insert into @X1
+  values(@a,@i)
+
+  declare fdset cursor scroll
+  for select * from @FD
+  
+  while (1=1)
+    begin
+      set @a=(select attr from @X1 where lv=@i)
+      set @i=@i+1
+      
+      open fdset
+      while @@FETCH_STATUS=0
+      begin
+        fetch from fdset into @fd1
+        set @j=(select CHARINDEX('→',@fd1))
+        set @z=LEFT(@fd1,@j-1)
+        set @w=SUBSTRING(@fd1,@j+1,LEN(@fd1))
+        if (select dbo.stricom(@z,@a))='true'
+          set @a=stuff(@a,LEN(@a)+1,LEN(@w),@w)
+      end
+      close fdset
+      
+      set @len=LEN(@a)
+      delete from @X
+      while(@len>0)
+        begin
+          insert into @X
+          values(LEFT(@a,1))
+          set @a=SUBSTRING(@a,2,@len)
+          set @len=@len-1
+        end
+        
+      open xset
+      set @k=@@CURSOR_ROWS
+      set @a=''
+      while @k>0
+        begin
+          fetch from xset into @b
+          set @a=stuff(@a,LEN(@a)+1,1,@b)
+          set @k=@k-1
+        end
+      close xset
+      
+      insert into @X1
+      values(@a,@i)
+      
+      if @a=(select attr from @X1 where lv=@i-1)
+         break
+    end
+    
+    set @text='属性集：'+@attr+'，属性集的闭包：'+@a
+
+RETURN @text
+
+END
+--函数使用：
+--print dbo.AttrClos('AD','ABD→A,ABD→C,C→B,C→E,AD→F,B→E')
