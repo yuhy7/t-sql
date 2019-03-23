@@ -1,0 +1,67 @@
+CREATE FUNCTION stricom   
+ ( 
+      --  源字符串str是否包含于in字符串  
+      @str   varchar(255), @in varchar(255)
+ 
+ )
+  
+ RETURNS char(4) --返回结果，如果ture表示包含于，false表示不包含于
+ 
+as
+begin
+  declare @a varchar(20)
+  declare @b varchar(20)
+  declare @c varchar(20)
+  declare @d varchar(20)
+  declare @r varchar(20)
+
+
+  declare @i int
+  declare @j int
+  declare @k int
+  declare @l int
+  declare @len int
+  declare @len1 int
+  
+  set @a=@in --'Abcde'
+  set @b=@str --'deab'
+  set @i=0
+  set @j=0
+  set @k=1
+  set @len=LEN(@a) 
+  set @len1=LEN(@b)
+  
+T1:  while (@len1>0)
+     begin
+      set @i=@i+1
+      set @c=SUBSTRING(@b,@i,1)
+      set @j=0
+      set @len=LEN(@a)
+      while (@len>0)
+         begin
+             set @l=@k
+             set @j=@j+1
+             set @d=SUBSTRING(@a,@j,1)
+             if @c=@d set @k=@k+1 
+             set @len=@len-1
+             if @k>@l 
+                begin
+                set @r='true'
+                break
+                end
+             else set @r='false'
+          
+          end
+       set @len1=@len1-1   
+       if @r='false' break
+    
+     end
+  
+  
+return @r
+
+end
+
+--select dbo.stricom('deab','Abcde')  调用时不要漏掉“dbo”
+
+--drop function dbo.stricom
